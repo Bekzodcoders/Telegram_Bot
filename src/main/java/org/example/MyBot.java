@@ -31,7 +31,32 @@ public class MyBot extends TelegramLongPollingBot {
             currentUser.setState(UserState.FIRSTNAME);
         }else {
         if (currentUser.getState().equals(UserState.FIRSTNAME)){
-           currentUser.
+           currentUser.getUser().setFirstName(text);
+           SendMessage sendMessage = new SendMessage();
+           sendMessage.setChatId(chatId);
+           sendMessage.setText("Maxsulotni tanlang");
+
+           ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
+           List<KeyboardRow> rows = new ArrayList<>();
+           replyKeyboardMarkup.setKeyboard(rows);
+           KeyboardRow row = new KeyboardRow();
+           KeyboardRow row2 = new KeyboardRow();
+           KeyboardButton button = new KeyboardButton();
+           KeyboardButton button2 = new KeyboardButton();
+
+           button.setText("Olma");
+           button2.setText("Anor");
+
+           row.add(button);
+           row2.add(button2);
+
+           rows.add(row);
+           rows.add(row2);
+
+           sendMessage.setReplyMarkup(replyKeyboardMarkup);
+
+            execute(sendMessage);
+            currentUser.setState(UserState.SELECT_PRODUCT);
         }
         }
 
@@ -49,6 +74,7 @@ public class MyBot extends TelegramLongPollingBot {
         TelegramState telegramState = new TelegramState();
         telegramState.setChatId(chatId);
         telegramState.setState(UserState.START);
+        users.add(telegramState);
         return telegramState;
     }
 
