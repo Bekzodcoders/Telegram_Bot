@@ -18,64 +18,52 @@ public class MyBot extends TelegramLongPollingBot {
     @Override
     public void onUpdateReceived(Update update) {
         try {
-            Long chatId = update.getMessage().getChatId();
-            String text = update.getMessage().getText();
-            TelegramState currentUser = findChatId(chatId);
-            if (text.equals("/start")) {
-                SendMessage sendMessage = new SendMessage();
-                sendMessage.setChatId(chatId);
-                sendMessage.setText("Salom, ismingizni kiriting, iltimos.");
-                execute(sendMessage);
-                currentUser.setState(UserState.FIRSTNAME);
-            } else {
-                if (currentUser.getState().equals(UserState.FIRSTNAME)) {
-                    currentUser.getUser().setFirstName(text);
-                    SendMessage sendMessage = new SendMessage();
-                    sendMessage.setChatId(chatId);
-                    sendMessage.setText("Mahsulotni tanlang");
 
+            if (update.hasMessage() && update.getMessage().hasText()) {
+                String messageText = update.getMessage().getText();
+                Long chatId = update.getMessage().getChatId();
+                TelegramState currentUser = findChatId(chatId);
+
+                if (messageText.equals("/start")) {
+                    SendMessage message = new SendMessage();
+                    message.setText("Salom, ismingizni kiriting, iltimos.");
+                    message.setChatId(chatId);
+                    execute(message);
+                    currentUser.setState(UserState.FIRSTNAME);
+                } else if (currentUser.getState().equals(UserState.FIRSTNAME)) {
+                    SendMessage message = new SendMessage();
+                    message.setChatId(chatId);
+                    message.setText("Telefon raqamingizni yuboring, iltimos.");
                     ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
-                    List<KeyboardRow> rows = new ArrayList<>();
-                    replyKeyboardMarkup.setKeyboard(rows);
-                    KeyboardRow row = new KeyboardRow();
-                    KeyboardRow row2 = new KeyboardRow();
-                    KeyboardButton button = new KeyboardButton();
-                    KeyboardButton button2 = new KeyboardButton();
+                    KeyboardRow keyboardRow = new KeyboardRow();
+                    KeyboardButton contactButton = new KeyboardButton();
+                    contactButton.setText("Telefon raqamingizni yuboring");
+                    contactButton.setRequestContact(true);
+                    keyboardRow.add(contactButton);
+                    List<KeyboardRow> keyboard = new ArrayList<>();
+                    keyboard.add(keyboardRow);
+                    replyKeyboardMarkup.setKeyboard(keyboard);
+                    message.setReplyMarkup(replyKeyboardMarkup);
+                    execute(message);
+                    currentUser.setState(UserState.PHONENUMBER);
+                } if (update.hasMessage() && update.getMessage().hasContact()) {
+                    String phoneNumber = update.getMessage().getContact().getPhoneNumber();
+                    Long chatId1 = update.getMessage().getChatId();
+                    SendMessage message = new SendMessage();
+                    message.setChatId(chatId1);
+                    message.setText("Telefon raqamingiz qabul qilindi: " + phoneNumber);
 
-                    button.setText("Olma");
-                    button2.setText("Anor");
-
-                    row.add(button);
-                    row2.add(button2);
-
-                    rows.add(row);
-                    rows.add(row2);
-
-                    sendMessage.setReplyMarkup(replyKeyboardMarkup);
-
-                    execute(sendMessage);
-                    currentUser.setState(UserState.SELECT_PRODUCT);
-                } else if (currentUser.getState().equals(UserState.SELECT_PRODUCT)) {
-                        SendMessage sendMessage = new SendMessage();
-                        ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
-                        List<KeyboardRow> rows = new ArrayList<>();
-                        KeyboardRow row = new KeyboardRow();
-                        KeyboardButton button = new KeyboardButton();
-                        button.setText("Savatchaga");
-                        replyKeyboardMarkup.setKeyboard(rows);
-                        row.add(button);
-                        rows.add(row);
-                        sendMessage.setReplyMarkup(replyKeyboardMarkup);
-                        execute(sendMessage);
-
-
+                    execute(message);
                 }
             }
-
-        } catch (TelegramApiException e) {
-            throw new RuntimeException(e);
+        }catch (TelegramApiException e){
+            e.printStackTrace();
         }
     }
+
+
+
+
 
     private TelegramState findChatId(Long chatId) {
         for (TelegramState user : users) {
