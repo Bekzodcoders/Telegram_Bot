@@ -2,63 +2,75 @@ package org.example;
 
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-import javax.validation.constraints.Max;
 import java.util.ArrayList;
 import java.util.List;
 
 public class MyBot extends TelegramLongPollingBot {
 
     List<TelegramState> users = new ArrayList<>();
+
     @Override
     public void onUpdateReceived(Update update) {
-
         try {
-        Long chatId = update.getMessage().getChatId();
-        String text = update.getMessage().getText();
-        TelegramState currentUser = findChatId(chatId);
-        if (text.equals("/start")){
-            SendMessage sendMessage = new SendMessage();
-            sendMessage.setChatId(chatId);
-            sendMessage.setText("Assalomu aleykum\nIltimos Ismingizni kiriting");
-            execute(sendMessage);
-            currentUser.setState(UserState.FIRSTNAME);
-        }else {
-        if (currentUser.getState().equals(UserState.FIRSTNAME)){
-           currentUser.getUser().setFirstName(text);
-           SendMessage sendMessage = new SendMessage();
-           sendMessage.setChatId(chatId);
-           sendMessage.setText("Maxsulotni tanlang");
+            Long chatId = update.getMessage().getChatId();
+            String text = update.getMessage().getText();
+            TelegramState currentUser = findChatId(chatId);
+            if (text.equals("/start")) {
+                SendMessage sendMessage = new SendMessage();
+                sendMessage.setChatId(chatId);
+                sendMessage.setText("Salom, ismingizni kiriting, iltimos.");
+                execute(sendMessage);
+                currentUser.setState(UserState.FIRSTNAME);
+            } else {
+                if (currentUser.getState().equals(UserState.FIRSTNAME)) {
+                    currentUser.getUser().setFirstName(text);
+                    SendMessage sendMessage = new SendMessage();
+                    sendMessage.setChatId(chatId);
+                    sendMessage.setText("Mahsulotni tanlang");
 
-           ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
-           List<KeyboardRow> rows = new ArrayList<>();
-           replyKeyboardMarkup.setKeyboard(rows);
-           KeyboardRow row = new KeyboardRow();
-           KeyboardRow row2 = new KeyboardRow();
-           KeyboardButton button = new KeyboardButton();
-           KeyboardButton button2 = new KeyboardButton();
+                    ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
+                    List<KeyboardRow> rows = new ArrayList<>();
+                    replyKeyboardMarkup.setKeyboard(rows);
+                    KeyboardRow row = new KeyboardRow();
+                    KeyboardRow row2 = new KeyboardRow();
+                    KeyboardButton button = new KeyboardButton();
+                    KeyboardButton button2 = new KeyboardButton();
 
-           button.setText("Olma");
-           button2.setText("Anor");
+                    button.setText("Olma");
+                    button2.setText("Anor");
 
-           row.add(button);
-           row2.add(button2);
+                    row.add(button);
+                    row2.add(button2);
 
-           rows.add(row);
-           rows.add(row2);
+                    rows.add(row);
+                    rows.add(row2);
 
-           sendMessage.setReplyMarkup(replyKeyboardMarkup);
+                    sendMessage.setReplyMarkup(replyKeyboardMarkup);
 
-            execute(sendMessage);
-            currentUser.setState(UserState.SELECT_PRODUCT);
-        }
-        }
+                    execute(sendMessage);
+                    currentUser.setState(UserState.SELECT_PRODUCT);
+                } else if (currentUser.getState().equals(UserState.SELECT_PRODUCT)) {
+                        SendMessage sendMessage = new SendMessage();
+                        ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
+                        List<KeyboardRow> rows = new ArrayList<>();
+                        KeyboardRow row = new KeyboardRow();
+                        KeyboardButton button = new KeyboardButton();
+                        button.setText("Savatchaga");
+                        replyKeyboardMarkup.setKeyboard(rows);
+                        row.add(button);
+                        rows.add(row);
+                        sendMessage.setReplyMarkup(replyKeyboardMarkup);
+                        execute(sendMessage);
+
+
+                }
+            }
 
         } catch (TelegramApiException e) {
             throw new RuntimeException(e);
@@ -67,7 +79,7 @@ public class MyBot extends TelegramLongPollingBot {
 
     private TelegramState findChatId(Long chatId) {
         for (TelegramState user : users) {
-            if (user.getChatId().equals(chatId)){
+            if (user.getChatId().equals(chatId)) {
                 return user;
             }
         }
