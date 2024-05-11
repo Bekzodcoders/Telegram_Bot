@@ -18,16 +18,18 @@ public class MyBot extends TelegramLongPollingBot {
     @Override
     public void onUpdateReceived(Update update) {
         try {
-
+            String messageText = update.getMessage().getText();
+            Long chatId = update.getMessage().getChatId();
+            TelegramState currentUser = findChatId(chatId);
             if (update.hasMessage() && update.getMessage().hasText()) {
-                String messageText = update.getMessage().getText();
-                Long chatId = update.getMessage().getChatId();
-                TelegramState currentUser = findChatId(chatId);
+
 
                 if (messageText.equals("/start")) {
                     SendMessage message = new SendMessage();
                     message.setText("Salom, ismingizni kiriting, iltimos.");
                     message.setChatId(chatId);
+                    String firstName = update.getMessage().getFrom().getFirstName();
+                    System.out.println("ismi: "+firstName);
                     execute(message);
                     currentUser.setState(UserState.FIRSTNAME);
                 } else if (currentUser.getState().equals(UserState.FIRSTNAME)) {
@@ -46,15 +48,19 @@ public class MyBot extends TelegramLongPollingBot {
                     message.setReplyMarkup(replyKeyboardMarkup);
                     execute(message);
                     currentUser.setState(UserState.PHONENUMBER);
-                } if (update.hasMessage() && update.getMessage().hasContact()) {
-                    String phoneNumber = update.getMessage().getContact().getPhoneNumber();
-                    Long chatId1 = update.getMessage().getChatId();
-                    SendMessage message = new SendMessage();
-                    message.setChatId(chatId1);
-                    message.setText("Telefon raqamingiz qabul qilindi: " + phoneNumber);
 
-                    execute(message);
                 }
+            }
+            if (currentUser.getState().equals(UserState.PHONENUMBER) && update.getMessage().hasContact()) {
+
+                String phoneNumber = update.getMessage().getContact().getPhoneNumber();
+                Long chatId1 = update.getMessage().getChatId();
+                SendMessage message = new SendMessage();
+                message.setChatId(chatId1);
+                System.out.println("Telefon raqami : " + phoneNumber);
+                message.setText("Telefon raqamingiz qabul qilindi: " + phoneNumber);
+                execute(message);
+                currentUser.setState(UserState.DONE);
             }
         }catch (TelegramApiException e){
             e.printStackTrace();
