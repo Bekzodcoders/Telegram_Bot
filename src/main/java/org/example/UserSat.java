@@ -1,6 +1,6 @@
 package org.example;
 
-public class User {
+public class UserSat{
     private String firstName;
     private String lastName;
     private byte age;

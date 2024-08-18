@@ -2,17 +2,9 @@ package org.example;
 
 public class TelegramState {
     private Long chatId;
-    private String state;
-    private  User user = new User();
+    private UserState state;
 
-    public User getUser() {
-        return user;
-    }
-
-    public void setUser(User user) {
-        this.user = user;
-    }
-
+    // Getters and Setters
     public Long getChatId() {
         return chatId;
     }
@@ -21,11 +13,11 @@ public class TelegramState {
         this.chatId = chatId;
     }
 
-    public String getState() {
+    public UserState getState() {
         return state;
     }
 
-    public void setState(String state) {
+    public void setState(UserState state) {
         this.state = state;
     }
 }

@@ -1,75 +1,164 @@
 package org.example;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URL;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.List;
 
 public class MyBot extends TelegramLongPollingBot {
 
-    List<TelegramState> users = new ArrayList<>();
+    private List<TelegramState> users = new ArrayList<>();
 
     @Override
     public void onUpdateReceived(Update update) {
         try {
-            String messageText = update.getMessage().getText();
-            Long chatId = update.getMessage().getChatId();
-            TelegramState currentUser = findChatId(chatId);
             if (update.hasMessage() && update.getMessage().hasText()) {
-
+                String messageText = update.getMessage().getText();
+                Long chatId = update.getMessage().getChatId();
+                TelegramState currentUser = findChatId(chatId);
 
                 if (messageText.equals("/start")) {
                     SendMessage message = new SendMessage();
                     message.setText("Salom, ismingizni kiriting, iltimos.");
                     message.setChatId(chatId);
-                    String firstName = update.getMessage().getFrom().getFirstName();
-                    System.out.println("ismi: "+firstName);
                     execute(message);
                     currentUser.setState(UserState.FIRSTNAME);
+
                 } else if (currentUser.getState().equals(UserState.FIRSTNAME)) {
                     SendMessage message = new SendMessage();
                     message.setChatId(chatId);
-                    message.setText("Telefon raqamingizni yuboring, iltimos.");
-                    ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
-                    KeyboardRow keyboardRow = new KeyboardRow();
-                    KeyboardButton contactButton = new KeyboardButton();
-                    contactButton.setText("Telefon raqamingizni yuboring");
-                    contactButton.setRequestContact(true);
-                    keyboardRow.add(contactButton);
-                    List<KeyboardRow> keyboard = new ArrayList<>();
-                    keyboard.add(keyboardRow);
-                    replyKeyboardMarkup.setKeyboard(keyboard);
-                    message.setReplyMarkup(replyKeyboardMarkup);
+                    message.setText("Instagram postning URL manzilini yuboring.");
+                    message.setReplyMarkup(null);
                     execute(message);
-                    currentUser.setState(UserState.PHONENUMBER);
+                    currentUser.setState(UserState.INSTAGRAMURL);
 
+                } else if (currentUser.getState().equals(UserState.INSTAGRAMURL)) {
+                    String videoUrl = fetchVideoUrl(messageText);
+                    if (videoUrl != null) {
+                        String videoFilePath = downloadVideo(videoUrl, "video.mp4");
+                        if (videoFilePath != null) {
+                            sendVideo(chatId, videoFilePath);
+                        } else {
+                            sendErrorMessage(chatId, "Video fayli yuklab olinmadi.");
+                        }
+                    } else {
+                        sendErrorMessage(chatId, "Video URL olinganida xato yuz berdi.");
+                    }
                 }
             }
-            if (currentUser.getState().equals(UserState.PHONENUMBER) && update.getMessage().hasContact()) {
-
-                String phoneNumber = update.getMessage().getContact().getPhoneNumber();
-                Long chatId1 = update.getMessage().getChatId();
-                SendMessage message = new SendMessage();
-                message.setChatId(chatId1);
-                System.out.println("Telefon raqami : " + phoneNumber);
-                message.setText("Telefon raqamingiz qabul qilindi: " + phoneNumber);
-                execute(message);
-                currentUser.setState(UserState.DONE);
-            }
-        }catch (TelegramApiException e){
+        } catch (TelegramApiException e) {
             e.printStackTrace();
         }
     }
 
+    private String fetchVideoUrl(String instagramUrl) {
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://instagram-downloader-reels-and-videos-downloader.p.rapidapi.com/post?url=" + instagramUrl))
+                    .header("x-rapidapi-key", "75981dfe95msh5e880111ca38131p18c7c2jsn7f044351206d")
+                    .header("x-rapidapi-host", "instagram-downloader-reels-and-videos-downloader.p.rapidapi.com")
+                    .method("GET", HttpRequest.BodyPublishers.noBody())
+                    .build();
+            HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+            System.out.println("API Response: " + response.body());
+            return parseVideoUrl(response.body());
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
 
+    private String parseVideoUrl(String apiResponse) {
+        try {
+            JSONObject jsonResponse = new JSONObject(apiResponse);
+            JSONArray dataArray = jsonResponse.getJSONArray("data");
 
+            if (dataArray.length() > 0) {
+                JSONObject videoData = dataArray.getJSONObject(0);
+                return videoData.getString("download_url");
+            } else {
+                System.out.println("No video data found in API response.");
+                return null;
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
 
+    private String downloadVideo(String videoUrl, String outputFilePath) {
+        try {
+            URL url = new URL(videoUrl);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+
+            if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                System.out.println("Failed to download video: " + connection.getResponseCode());
+                return null;
+            }
+
+            File outputFile = new File(outputFilePath);
+            try (InputStream in = connection.getInputStream();
+                 FileOutputStream fos = new FileOutputStream(outputFile)) {
+                byte[] buffer = new byte[1024];
+                int bytesRead;
+                while ((bytesRead = in.read(buffer)) != -1) {
+                    fos.write(buffer, 0, bytesRead);
+                }
+            }
+            connection.disconnect();
+            return outputFilePath;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    private void sendVideo(Long chatId, String videoFilePath) {
+        SendDocument sendDocument = new SendDocument();
+        sendDocument.setChatId(chatId);
+        File videoFile = new File(videoFilePath);
+
+        if (videoFile.exists() && videoFile.length() > 0) {
+            sendDocument.setDocument(new InputFile(videoFile));
+            try {
+                execute(sendDocument);
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
+            }
+        } else {
+            sendErrorMessage(chatId, "Video fayli mavjud emas yoki bo'sh.");
+        }
+    }
+
+    private void sendErrorMessage(Long chatId, String errorMessageText) {
+        SendMessage errorMessage = new SendMessage();
+        errorMessage.setChatId(chatId);
+        errorMessage.setText(errorMessageText);
+        try {
+            execute(errorMessage);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
+    }
 
     private TelegramState findChatId(Long chatId) {
         for (TelegramState user : users) {
@@ -83,7 +172,6 @@ public class MyBot extends TelegramLongPollingBot {
         users.add(telegramState);
         return telegramState;
     }
-
 
     @Override
     public String getBotUsername() {
