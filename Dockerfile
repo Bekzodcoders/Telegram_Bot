@@ -1,9 +1,11 @@
-FROM openjdk:17-jdk-slim
-
-COPY . /app
-
+FROM openjdk:22-jdk
 WORKDIR /app
+COPY . /app
+RUN mvn clean package -DskipTests
 
-RUN ./mvnw clean package -DskipTests
 
-CMD ["java", "-jar", "Telegram_Bot.jar"]
+
+
+
+
+CMD ["java", "-jar", "target/Telegram_Bot.jar"]
